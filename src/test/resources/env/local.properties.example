@@ -1,0 +1,11 @@
+# Шаблон настроек локального стенда.
+# Скопируй в local.properties и подставь реальные значения из
+# C:\Users\Evgeny\IdeaProjects\aqa-local-stand\espocrm\.env
+
+url=http://localhost:8080
+adminLogin=admin
+adminPass=<ESPOCRM_ADMIN_PASSWORD из .env стенда>
+
+dbUrl=jdbc:mysql://localhost:3306/espocrm?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+dbUser=espocrm
+dbPass=<MYSQL_PASSWORD из .env стенда>

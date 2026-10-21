@@ -1,0 +1,18 @@
+# Сборка
+build/
+.gradle/
+out/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Отчёты
+allure-results/
+allure-report/
+
+# Локальные настройки с паролями: в репозиторий не попадают.
+# Шаблон лежит рядом - env/local.properties.example
+src/test/resources/env/local.properties

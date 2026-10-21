@@ -1,0 +1,92 @@
+// Автотесты для локального стенда EspoCRM.
+// Стек намеренно повторяет рабочий проект cometal: что выучишь здесь - применимо там, и наоборот.
+
+plugins {
+    id 'java'
+    // Эти два плагина подключают поддержку Allure и, что важно, AspectJ-агент,
+    // без которого аннотации @Step не попадают в отчёт.
+    id 'io.qameta.allure' version '2.11.2'
+    id 'io.qameta.allure-adapter' version '2.11.2'
+}
+
+group = 'ru.espocrm'
+version = '1.0-SNAPSHOT'
+
+ext {
+    selenideVersion = '7.17.0'
+    junitVersion    = '5.12.2'
+    allureVersion   = '2.29.1'
+    restAssured     = '5.5.1'
+    assertjVersion  = '3.26.3'
+    slf4jVersion    = '2.0.17'
+    lombokVersion   = '1.18.38'
+    mysqlVersion    = '8.4.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // Тестовый движок
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitVersion}"
+    testRuntimeOnly    "org.junit.platform:junit-platform-launcher"
+
+    // UI
+    testImplementation "com.codeborne:selenide:${selenideVersion}"
+
+    // Отчёты
+    testImplementation("io.qameta.allure:allure-junit5:${allureVersion}") {
+        exclude group: 'org.junit.jupiter'
+    }
+    testImplementation("io.qameta.allure:allure-selenide:${allureVersion}") {
+        exclude group: 'com.codeborne'
+    }
+    runtimeOnly 'org.aspectj:aspectjweaver:1.9.21'
+
+    // API
+    testImplementation "io.rest-assured:rest-assured:${restAssured}"
+
+    // Ассерты (читаемее, чем стандартные JUnit)
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+
+    // База данных - понадобится на шаге "проверка данных в БД после действия в UI"
+    testImplementation "com.mysql:mysql-connector-j:${mysqlVersion}"
+
+    // Логи
+    testImplementation "org.slf4j:slf4j-simple:${slf4jVersion}"
+
+    // Меньше boilerplate в моделях данных
+    testCompileOnly         "org.projectlombok:lombok:${lombokVersion}"
+    testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+test {
+    useJUnitPlatform()
+
+    // ВАЖНО: пробрасываем системные свойства в JVM тестов.
+    // Именно этой строки не хватает в проекте cometal, из-за чего там "-Denv=dev"
+    // не доезжает до тестов и прогон всегда уходит на стенд rc.
+    // Стоит выше строки с file.encoding, иначе затрёт явную UTF-8.
+    systemProperties System.properties
+    systemProperty 'file.encoding', 'UTF-8'
+
+    // Тесты не кэшируются: прогон всегда реальный
+    outputs.upToDateWhen { false }
+
+    testLogging {
+        showStandardStreams = true
+        events 'passed', 'skipped', 'failed'
+        exceptionFormat = 'full'
+    }
+}
