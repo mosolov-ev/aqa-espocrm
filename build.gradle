@@ -76,7 +76,15 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 test {
-    useJUnitPlatform()
+    // Фильтр по тегам: gradlew test -Dtag=ui  запустит только UI-тесты.
+    // Теги проставлены аннотацией @Tag на классах и методах: ui, api, db, smoke.
+    // Если тег не передан — выполняются все тесты.
+    useJUnitPlatform {
+        String tag = System.getProperty('tag')
+        if (tag) {
+            includeTags tag
+        }
+    }
 
     // ВАЖНО: пробрасываем системные свойства в JVM тестов.
     // Именно этой строки не хватает в проекте cometal, из-за чего там "-Denv=dev"
