@@ -54,6 +54,23 @@ public final class EspoApi {
                 .build();
     }
 
+    /**
+     * Спецификация с ВКЛЮЧЁННОЙ проверкой дублей — без заголовка X-Skip-Duplicate-Check.
+     * Нужна негативному тесту, который проверяет, что система действительно
+     * не даёт создать запись с уже существующим названием и отвечает 409 Conflict.
+     */
+    public static RequestSpecification authorizedWithDuplicateCheck() {
+        String credentials = TestConfig.adminLogin() + ":" + TestConfig.adminPassword();
+        String basic = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+
+        return new RequestSpecBuilder()
+                .setBaseUri(TestConfig.url())
+                .setBasePath("/api/v1")
+                .setContentType(ContentType.JSON)
+                .addHeader("Authorization", "Basic " + basic)
+                .build();
+    }
+
     /** Запрос без авторизации — нужен негативным тестам, проверяющим доступ */
     public static RequestSpecification anonymous() {
         return new RequestSpecBuilder()

@@ -21,6 +21,7 @@ ext {
     slf4jVersion    = '2.0.17'
     lombokVersion   = '1.18.38'
     mysqlVersion    = '8.4.0'
+    jacksonVersion  = '2.21.1'
 }
 
 java {
@@ -52,6 +53,9 @@ dependencies {
 
     // API
     testImplementation "io.rest-assured:rest-assured:${restAssured}"
+    // Сериализатор JSON. REST Assured не умеет превращать Java-объекты в тело запроса
+    // сам по себе: без него любой .body(Map) падает с "no JSON serializer found in classpath".
+    testImplementation "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
 
     // Ассерты (читаемее, чем стандартные JUnit)
     testImplementation "org.assertj:assertj-core:${assertjVersion}"
