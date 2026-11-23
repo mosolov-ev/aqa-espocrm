@@ -1,0 +1,108 @@
+# Автоматический прогон тестов при каждом push.
+#
+# GitHub поднимает EspoCRM в контейнерах на своём сервере, наполняет базу тестовыми
+# данными и гоняет тесты в браузере без окна. Результат виден значком в README.
+#
+# Пароли здесь не секретные: стенд живёт полторы минуты внутри одноразовой
+# виртуальной машины и наружу не торчит.
+
+name: tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:        # позволяет запустить вручную кнопкой в интерфейсе GitHub
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      ESPOCRM_PORT: '8080'
+      ESPOCRM_ADMIN_USERNAME: admin
+      ESPOCRM_ADMIN_PASSWORD: CiAdminPass123
+      MYSQL_PASSWORD: CiMysqlPass123
+      MYSQL_ROOT_PASSWORD: CiRootPass123
+      MYSQL_PORT: '3306'
+
+    steps:
+      - name: Забрать код
+        uses: actions/checkout@v4
+
+      - name: Поставить JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: gradle
+
+      # Файлы с паролями в репозиторий не попадают, поэтому собираем их здесь
+      # из переменных окружения — ровно так же, как делается на новой машине.
+      - name: Создать файлы настроек
+        run: |
+          cat > stand/.env <<EOF
+          ESPOCRM_PORT=${ESPOCRM_PORT}
+          ESPOCRM_ADMIN_USERNAME=${ESPOCRM_ADMIN_USERNAME}
+          ESPOCRM_ADMIN_PASSWORD=${ESPOCRM_ADMIN_PASSWORD}
+          MYSQL_PASSWORD=${MYSQL_PASSWORD}
+          MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+          MYSQL_PORT=${MYSQL_PORT}
+          EOF
+
+          mkdir -p src/test/resources/env
+          cat > src/test/resources/env/local.properties <<EOF
+          url=http://localhost:${ESPOCRM_PORT}
+          adminLogin=${ESPOCRM_ADMIN_USERNAME}
+          adminPass=${ESPOCRM_ADMIN_PASSWORD}
+          dbUrl=jdbc:mysql://localhost:${MYSQL_PORT}/espocrm?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8
+          dbUser=espocrm
+          dbPass=${MYSQL_PASSWORD}
+          EOF
+
+      - name: Поднять стенд
+        working-directory: stand
+        run: docker compose up -d
+
+      - name: Дождаться готовности EspoCRM
+        run: |
+          for i in $(seq 1 90); do
+            code=$(curl -s -o /dev/null -m 5 -w '%{http_code}' http://localhost:8080/ || true)
+            if [ "$code" = "200" ]; then echo "Стенд готов через $((i*5)) секунд"; exit 0; fi
+            sleep 5
+          done
+          echo "Стенд не поднялся, последний код: $code"
+          docker logs espocrm --tail 50 || true
+          docker logs espocrm-mysql --tail 30 || true
+          exit 1
+
+      # Наполняем данными тем же скриптом, что и на рабочей машине.
+      # PowerShell на серверах GitHub предустановлен, так что скрипт работает
+      # и под Linux — заодно это проверка, что он не завязан на Windows.
+      - name: Наполнить тестовыми данными
+        working-directory: stand
+        shell: pwsh
+        run: ./seed-data.ps1
+
+      - name: Прогнать тесты
+        run: ./gradlew test "-Dselenide.headless=true" --no-daemon
+
+      - name: Сохранить результаты Allure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: build/allure-results
+          retention-days: 14
+
+      # Скриншоты и разметку страниц прикладываем только при падении —
+      # именно по ним разбирают, что пошло не так.
+      - name: Сохранить скриншоты упавших тестов
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failure-screenshots
+          path: build/reports/tests
+          retention-days: 14
