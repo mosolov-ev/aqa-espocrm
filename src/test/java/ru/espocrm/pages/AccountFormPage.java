@@ -63,6 +63,16 @@ public class AccountFormPage {
         return nameInput;
     }
 
+    /**
+     * Ячейка поля «Название» целиком.
+     *
+     * <p>При неуспешной валидации EspoCRM добавляет ей класс {@code has-error}.
+     * Проверять нужно именно ячейку, а не сам input: класс вешается на обёртку.
+     */
+    public SelenideElement nameFieldCell() {
+        return $("div.cell[data-name='name']");
+    }
+
     /** Кнопка «Сохранить» */
     public SelenideElement saveButton() {
         return saveButton;
