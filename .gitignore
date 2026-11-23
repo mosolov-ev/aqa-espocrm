@@ -3,7 +3,7 @@ build/
 .gradle/
 out/
 
-# IDE
+# IDE (но .run/ с конфигурациями запуска - коммитим, см. ниже)
 .idea/
 *.iml
 *.ipr
@@ -14,5 +14,10 @@ allure-results/
 allure-report/
 
 # Локальные настройки с паролями: в репозиторий не попадают.
-# Шаблон лежит рядом - env/local.properties.example
+# Рядом лежат шаблоны *.example - скопируй их и подставь свои значения.
 src/test/resources/env/local.properties
+stand/.env
+
+# Произвольные снимки базы (кроме эталонного espocrm-seed.sql.gz)
+stand/backup/*.sql.gz
+!stand/backup/espocrm-seed.sql.gz

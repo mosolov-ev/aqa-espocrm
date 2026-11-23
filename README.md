@@ -20,6 +20,19 @@ C:\Users\Evgeny\IdeaProjects\aqa-local-stand\espocrm\start-stand.ps1
 
 ## Запуск тестов
 
+> [!important] Все команды выполняются **из папки проекта**
+> Запись `.\gradlew.bat` означает «файл в текущей папке». Если запустить её из `C:\Windows\System32`
+> или из домашней папки, будет ошибка «Имя не распознано как имя командлета». Сначала перейди в проект:
+>
+> ```bash
+> cd C:\Users\Evgeny\IdeaProjects\aqa-espocrm
+> ```
+>
+> Проверить, что ты на месте: в папке должен лежать `gradlew.bat` (команда `dir gradlew.bat`).
+> В IntelliJ IDEA встроенный терминал открывается в папке проекта сразу — там `cd` не нужен.
+
+Все тесты:
+
 ```bash
 .\gradlew.bat test
 ```
@@ -36,11 +49,25 @@ C:\Users\Evgeny\IdeaProjects\aqa-local-stand\espocrm\start-stand.ps1
 .\gradlew.bat test "-Dselenide.headless=true"
 ```
 
-Отчёт Allure:
+## Отчёт Allure
+
+Собрать отчёт в папку:
+
+```bash
+.\gradlew.bat allureReport
+```
+
+Готовый отчёт: `build\reports\allure-report\allureReport\index.html` — можно открыть двойным кликом.
+
+Собрать и сразу открыть в браузере:
 
 ```bash
 .\gradlew.bat allureServe
 ```
+
+`allureServe` поднимает локальный веб-сервер и **не завершается сам** — консоль будет занята, пока не нажмёшь Ctrl+C. Это нормально, так и задумано.
+
+Отчёт строится по результатам последнего прогона из `build\allure-results`. Если тесты ещё не запускались, отчёт будет пустым.
 
 ---
 

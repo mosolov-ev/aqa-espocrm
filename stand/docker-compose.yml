@@ -1,0 +1,71 @@
+# Локальный стенд EspoCRM для тренировок по автоматизации тестирования.
+#
+# Запуск:    docker compose up -d
+# Остановка: docker compose stop      (данные сохраняются)
+# Снести:    docker compose down -v   (вместе с данными!)
+#
+# Важно: начиная с EspoCRM 10 нельзя монтировать /var/www/html целиком —
+# монтируются только три каталога ниже, иначе ломаются права на запись.
+
+# Имя docker-проекта зафиксировано явно.
+# По умолчанию Compose берёт его из имени папки, и при переносе стенда в другой каталог
+# он создал бы НОВЫЕ тома, а база оказалась бы пустой. Явное имя защищает данные.
+name: espocrm
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: espocrm-mysql
+    restart: always
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: espocrm
+      MYSQL_USER: espocrm
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      # Публикуем только на 127.0.0.1: база не должна быть доступна из сети и через VPN.
+      # Порт нужен для DBeaver и для JDBC-подключений из автотестов.
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  espocrm:
+    image: espocrm/espocrm:latest
+    container_name: espocrm
+    restart: always
+    depends_on:
+      - mysql
+    environment:
+      ESPOCRM_DATABASE_PLATFORM: Mysql
+      ESPOCRM_DATABASE_HOST: mysql
+      ESPOCRM_DATABASE_NAME: espocrm
+      ESPOCRM_DATABASE_USER: espocrm
+      ESPOCRM_DATABASE_PASSWORD: ${MYSQL_PASSWORD}
+      ESPOCRM_ADMIN_USERNAME: ${ESPOCRM_ADMIN_USERNAME}
+      ESPOCRM_ADMIN_PASSWORD: ${ESPOCRM_ADMIN_PASSWORD}
+      ESPOCRM_SITE_URL: "http://localhost:${ESPOCRM_PORT}"
+    ports:
+      - "${ESPOCRM_PORT}:80"
+    volumes:
+      - espocrm-custom:/var/www/html/custom
+      - espocrm-data:/var/www/html/data
+      - espocrm-client-custom:/var/www/html/client/custom
+
+  espocrm-daemon:
+    image: espocrm/espocrm:latest
+    container_name: espocrm-daemon
+    restart: always
+    depends_on:
+      - espocrm
+    entrypoint: docker-daemon.sh
+    volumes:
+      - espocrm-custom:/var/www/html/custom
+      - espocrm-data:/var/www/html/data
+      - espocrm-client-custom:/var/www/html/client/custom
+
+volumes:
+  mysql-data:
+  espocrm-custom:
+  espocrm-data:
+  espocrm-client-custom:
