@@ -1,5 +1,7 @@
 # Автотесты EspoCRM
 
+[![tests](https://github.com/mosolov-ev/aqa-espocrm/actions/workflows/tests.yml/badge.svg)](https://github.com/mosolov-ev/aqa-espocrm/actions/workflows/tests.yml)
+
 UI + API + БД автотесты на Java против локального стенда EspoCRM, который поднимается в Docker вместе с проектом.
 
 **Стек:** Java 21 · Gradle · JUnit 5 · Selenide · REST Assured · AssertJ · Allure · MySQL Connector/J
