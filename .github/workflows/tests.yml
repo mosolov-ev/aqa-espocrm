@@ -86,8 +86,36 @@ jobs:
         shell: pwsh
         run: ./seed-data.ps1
 
+      # Флаг исполняемости хранится в самом git. Если он потеряется при работе
+      # из Windows, Linux откажется запускать скрипт с кодом 126 — поэтому страхуемся.
       - name: Прогнать тесты
-        run: ./gradlew test "-Dselenide.headless=true" --no-daemon
+        run: |
+          chmod +x ./gradlew
+          ./gradlew test "-Dselenide.headless=true" --no-daemon
+
+      # Логи прогона на GitHub видны только после входа в аккаунт, а аннотации —
+      # всем. Поэтому причины падения вытаскиваем из отчётов JUnit и печатаем
+      # командой ::error::, превращая их в аннотации.
+      - name: Показать упавшие тесты
+        if: failure()
+        run: |
+          python3 - <<'PYEOF'
+          import glob, re, html, os
+          found = False
+          for f in glob.glob("build/test-results/test/*.xml"):
+              s = open(f, encoding="utf-8").read()
+              suite = re.search(r'<testsuite[^>]*name="([^"]+)"', s)
+              suite = suite.group(1) if suite else f
+              for name, body in re.findall(r'<testcase name="([^"]+)"[^>]*(?:/>|>(.*?)</testcase>)', s, re.S):
+                  if body and "<failure" in body:
+                      found = True
+                      msg = re.search(r'<failure[^>]*message="([^"]*)"', body)
+                      msg = html.unescape(msg.group(1)) if msg else "без сообщения"
+                      msg = " ".join(msg.split())[:400]
+                      print(f"::error title=Упал тест: {name}::{suite} — {msg}")
+          if not found:
+              print("::error title=Прогон не дал результатов::Файлы отчётов JUnit пусты или отсутствуют")
+          PYEOF
 
       - name: Сохранить результаты Allure
         if: always()
@@ -96,6 +124,7 @@ jobs:
           name: allure-results
           path: build/allure-results
           retention-days: 14
+          if-no-files-found: ignore
 
       # Скриншоты и разметку страниц прикладываем только при падении —
       # именно по ним разбирают, что пошло не так.
@@ -106,3 +135,4 @@ jobs:
           name: failure-screenshots
           path: build/reports/tests
           retention-days: 14
+          if-no-files-found: ignore
